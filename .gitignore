@@ -1,0 +1,11 @@
+bin/
+examples/
+lib/
+licenses/
+log/
+opt/
+plugins/
+LICENCSE
+NOTICE
+output.txt 
+README.txt
