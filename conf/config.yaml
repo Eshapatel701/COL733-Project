@@ -79,7 +79,7 @@ taskmanager:
   # configured separately for each TaskManager.
   host: localhost
   # The number of task slots that each TaskManager offers. Each slot runs one parallel pipeline.
-  numberOfTaskSlots: 1
+  numberOfTaskSlots: 10
   memory:
     process:
       # The total process memory size for the TaskManager.
