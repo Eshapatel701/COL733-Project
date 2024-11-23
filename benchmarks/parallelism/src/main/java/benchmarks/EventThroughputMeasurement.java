@@ -1,35 +1,40 @@
 package benchmarks;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.accumulators.LongCounter;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.accumulators.LongCounter;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
-import org.knowm.xchart.*;
-import org.apache.flink.api.common.JobExecutionResult;
+import org.knowm.xchart.BitmapEncoder;
+import org.knowm.xchart.XYChart;
+import org.knowm.xchart.XYChartBuilder;
 
-import java.util.*;
-
-public class ParallelismMetrics {
+public class EventThroughputMeasurement {
 
     private static final Map<Integer, Long> throughputMap = new HashMap<>();
     private static final Map<Integer, Long> latencyMap = new HashMap<>();
 
     public static void main(String[] args) throws Exception {
-        int numEvents = 100000;
+        int parallelism = 1; // Set parallelism to 1 for single-threaded execution
         if (args.length > 0) {
             try {
-                numEvents = Integer.parseInt(args[0]);
+                parallelism = Integer.parseInt(args[0]);
             } catch (NumberFormatException e) {
-                System.err.println("Invalid number of events provided. Using default: " + numEvents);
+                System.err.println("Argument must be an integer");
+                System.exit(1);
             }
         }
-
-        for (int parallelism = 1; parallelism <= 10; parallelism++) {
+        for (int numEvents = 1; numEvents <= 100000000; numEvents *= 10) {
             System.out.println("Running with parallelism: " + parallelism);
 
             final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -38,7 +43,7 @@ public class ParallelismMetrics {
             env.setParallelism(parallelism);
 
             DataStream<TimeStampedEvent> events = env.fromSequence(1, numEvents)
-                    .map(i -> new TimeStampedEvent("event-" + i, System.currentTimeMillis()))
+                    .map(i -> new TimeStampedEvent("event-" + i, System.nanoTime()))
                     .returns(TypeInformation.of(TimeStampedEvent.class));
 
             DataStream<String> results = events
@@ -47,22 +52,23 @@ public class ParallelismMetrics {
             
             // results.print();
 
-            JobExecutionResult result = env.execute("Metrics Without Windowing - Parallelism " + parallelism);
+            JobExecutionResult result = env.execute("Single Thread Metrics");
 
             // Retrieve and aggregate the metrics
-            long totalThroughput = result.getAccumulatorResult("throughput");
+            long totalRuntime = result.getNetRuntime();
+            long totalThroughput = (long) ((double) numEvents * 1000 / (double) totalRuntime);
             long totalLatency = result.getAccumulatorResult("latency");
-            throughputMap.put(parallelism, totalThroughput);
-            latencyMap.put(parallelism, totalLatency / numEvents);
-            System.out.println("Total Throughput: " + totalThroughput + " events/sec");
-            System.out.println("Average Latency: " + totalLatency / numEvents + " ms");
+            throughputMap.put((int)Math.log10((double)numEvents), totalThroughput);
+            latencyMap.put((int)Math.log10((double)numEvents), totalLatency / numEvents);
+            // System.out.println("Total Throughput: " + totalThroughput + " events/sec");
+            // System.out.println("Total Latency: " + totalLatency + " ns");
         }
 
-        // Generate graphs after all jobs have completed
+        // Generate graphs after the job has completed
         System.out.println("Throughput: " + throughputMap);
         System.out.println("Latency: " + latencyMap);
-        // generateGraph("Throughput vs Parallelism", throughputMap, "Parallelism", "Throughput (events/sec)", "throughput.png");
-        // generateGraph("Latency vs Parallelism", latencyMap, "Parallelism", "Latency (ms)", "latency.png");
+        generateGraph("Throughput vs Number of Events", throughputMap, "Number of Events", "Throughput (events/sec)", "throughput_vs_numEvents_" + parallelism + ".png");
+        generateGraph("Latency vs Number of Events", latencyMap, "Number of Events", "Latency (ns)", "latency_vs_numEvents_" + parallelism + ".png");
     }
 
     public static class TimeStampedEvent {
@@ -78,10 +84,8 @@ public class ParallelismMetrics {
     public static class MetricTrackingFlatMapFunction extends RichFlatMapFunction<TimeStampedEvent, String> {
         private transient Counter eventCounter;
         private final int parallelism;
-        private long startTime;
         private long latencySum;
 
-        private LongCounter throughputAccumulator;
         private LongCounter latencyAccumulator;
 
         public MetricTrackingFlatMapFunction(int parallelism) {
@@ -91,34 +95,23 @@ public class ParallelismMetrics {
         @Override
         public void open(Configuration parameters) throws Exception {
             eventCounter = getRuntimeContext().getMetricGroup().counter("eventCounter");
-            startTime = System.currentTimeMillis();
             latencySum = 0;
 
-            throughputAccumulator = getRuntimeContext().getLongCounter("throughput");
             latencyAccumulator = getRuntimeContext().getLongCounter("latency");
         }
 
         @Override
         public void flatMap(TimeStampedEvent event, Collector<String> out) {
             eventCounter.inc();
-            long latency = System.currentTimeMillis() - event.timestamp;
+            long latency = System.nanoTime() - event.timestamp;
             latencySum += latency;
-
-            out.collect("Processed: " + event.value + ", Latency: " + latency + " ms");
+        
+            out.collect("Processed: " + event.value + ", Latency: " + latency + " ns");
         }
 
         @Override
         public void close() throws Exception {
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime;
-            long throughput = eventCounter.getCount() * 1000 / duration;
-            long avgLatency = latencySum / eventCounter.getCount();
-
-            throughputAccumulator.add(throughput);
             latencyAccumulator.add(latencySum);
-
-            // System.out.println("Throughput: " + throughput + " events/sec");
-            // System.out.println("Average Latency: " + avgLatency + " ms");
         }
     }
 
