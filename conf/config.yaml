@@ -296,3 +296,10 @@ rest:
 #       # Interval in milliseconds for refreshing the monitored directories.
 #       fs.refresh-interval: 10000
 
+metrics.reporters: file
+metrics.reporter.file.factory.class: org.apache.flink.metrics.reporter.FileReporter
+# metrics.reporter.file.path: /home/baadalvm/col733-project/benchmarks/metrics/output.txt
+metrics.reporter.file.path: /home/baadalvm/col733-project/output.txt
+metrics.reporter.file.interval: 1s
+
+# latencyTrackingInterval: 0.5s
