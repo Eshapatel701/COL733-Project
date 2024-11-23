@@ -60,6 +60,9 @@ public class DataStreamJob {
 		 */
 
 		// Execute program, beginning computation.
+		env.fromSequence(1, 10)
+			.filter(value -> value % 2 == 0)
+			.print();
 		env.execute("Flink Java API Skeleton");
 	}
 }
