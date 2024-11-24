@@ -5,5 +5,4 @@
 ./run.sh 
 
 ## build project
-cd benchmarks/baseline \
 ./build.sh
