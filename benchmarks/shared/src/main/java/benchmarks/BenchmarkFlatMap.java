@@ -4,24 +4,17 @@ package benchmarks ;
 
 
 
+import java.io.FileWriter;
+import java.io.PrintWriter;
+
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.metrics.Histogram;
-import org.apache.flink.metrics.HistogramStatistics;
-import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.dropwizard.metrics.DropwizardHistogramWrapper;
 import org.apache.flink.metrics.Gauge;
+import org.apache.flink.metrics.Histogram;
 import org.apache.flink.util.Collector;
 
-import org.apache.flink.core.fs.FileSystem;
-
-
-
-import org.apache.flink.dropwizard.metrics.DropwizardHistogramWrapper;
 import com.codahale.metrics.SlidingWindowReservoir;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 
 
 public class BenchmarkFlatMap extends RichFlatMapFunction<TimeStampedEvent, String> {
@@ -64,7 +57,7 @@ public class BenchmarkFlatMap extends RichFlatMapFunction<TimeStampedEvent, Stri
     @Override
     public void flatMap(TimeStampedEvent event, Collector<String> out) {
         // track latency 
-        long latency = System.currentTimeMillis() - event.timestamp;
+        long latency = System.currentTimeMillis() - event.entryTimestamp;
         latencyHistogram.update(latency);
         
         // track number of records for measuring throughput 
@@ -99,8 +92,8 @@ public class BenchmarkFlatMap extends RichFlatMapFunction<TimeStampedEvent, Stri
         double duration = (endTime - startTime)/1000.0 ; 
         double averageThroughput = recordCount / duration ; 
         
-        String output_path = "/home/baadalvm/COL733-Project/benchmarks/metrics/output.txt" ; 
-        try (PrintWriter writer = new PrintWriter(new FileWriter(output_path, true))) {
+        String output_path = "output.txt" ; 
+        try (PrintWriter writer = new PrintWriter(new FileWriter(output_path, false))) {
             writer.println("Latency Histogram Statistics:");
             writer.println("Min: " + latencyHistogram.getStatistics().getMin());
             writer.println("Max: " + latencyHistogram.getStatistics().getMax());

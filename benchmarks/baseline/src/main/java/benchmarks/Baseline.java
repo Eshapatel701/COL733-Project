@@ -34,7 +34,7 @@ public class Baseline {
         long sourceEndTime = System.currentTimeMillis() ; 
         System.out.printf("Time taken to generate source is %f\n", (sourceEndTime - sourceStartTime ) / 1000.0) ; 
         // Measure latency for flatMap operator 
-        source.flatMap(new BenchmarkFlatMap()).print();
+        source.flatMap(new BenchmarkFlatMap());
 
         env.execute("Baseline");
     }

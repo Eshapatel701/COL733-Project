@@ -7,3 +7,6 @@ mvn clean package
 echo "Building the parallelism module..."
 cd ../parallelism
 mvn clean package
+echo "Building the windowing module..."
+cd ../windowing
+mvn clean package

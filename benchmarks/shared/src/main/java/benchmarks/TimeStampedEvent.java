@@ -3,10 +3,15 @@ package benchmarks ;
 
 public class TimeStampedEvent {
     public String value ;
-    public long timestamp;
+    public long entryTimestamp;
+    public long exitTimestamp;
 
     public TimeStampedEvent(String value, long timestamp) {
         this.value = value;
-        this.timestamp = timestamp;
+        this.entryTimestamp = timestamp;
+    }
+
+    public void setExitTimestamp(long timestamp) {
+        this.exitTimestamp = timestamp;
     }
 }
