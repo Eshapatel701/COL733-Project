@@ -67,8 +67,8 @@ public class EventThroughputMeasurement {
         // Generate graphs after the job has completed
         System.out.println("Throughput: " + throughputMap);
         System.out.println("Latency: " + latencyMap);
-        generateGraph("Throughput vs Number of Events", throughputMap, "Number of Events", "Throughput (events/sec)", "throughput_vs_numEvents_" + parallelism + ".png");
-        generateGraph("Latency vs Number of Events", latencyMap, "Number of Events", "Latency (ns)", "latency_vs_numEvents_" + parallelism + ".png");
+        generateGraph("Throughput vs Number of Events", throughputMap, "log10(numEvents)", "Throughput (events/sec)", "throughput_vs_numEvents_" + parallelism + ".png");
+        generateGraph("Latency vs Number of Events", latencyMap, "log10(numEvents)", "Latency (ns)", "latency_vs_numEvents_" + parallelism + ".png");
     }
 
     public static class TimeStampedEvent {
